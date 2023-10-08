@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.rog//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="musicMapper">
+
+	<resultMap id="musicResultSet" type="music">
+		<id column="MUSIC_NO" property="musicNo"/>
+		<result column="MUSIC_TITLE" property="musicTitle"/>
+		<result column="MUSIC_ARTIST" property="musicArtist"/>
+		<result column="MUSIC_LYRICS" property="musicLyrics"/>
+		<result column="GENRE" property="genre"/>
+		<result column="ENROLL_DATE" property="enrollDate"/>
+		<result column="PLAY_COUNT" property="playCount"/>
+		<result column="DAILY_COUNT" property="dailyCount"/>
+		<result column="HOUR_COUNT" property="hourCount"/>
+		<result column="MUSIC_PATH" property="musicPath"/>
+		<result column="COVER_PATH" property="coverPath"/>
+		<result column="STATUS" property="status"/>
+	</resultMap>
+	
+	<resultMap id="playlistResultSet" type="playlist">
+		<id column="PLAYLIST_NO" property="playlistNo"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="PLAYLIST_NAME" property="playlistName"/>
+		<result column="STATUS" property="status"/>
+		<collection property="playlistSongs" ofType="music" javaType="java.util.List"
+					select="selectPlaylistSongs" column="PLAYLIST_NO"/>
+	</resultMap>
+	
+	<resultMap id="musicFileResultSet" type="musicFile">
+		<id column="MUSIC_NO" property="musicNo"/>
+		<result column="MUSIC_ORIGIN_NAME" property="musicOriginName"/>
+		<result column="MUSIC_CHANGE_NAME" property="musicChangeName"/>
+		<result column="MUSIC_PATH" property="musicPath"/>
+		<result column="COVER_ORIGIN_NAME" property="coverOriginName"/>
+		<result column="COVER_CHANGE_NAME" property="coverChangeName"/>
+		<result column="COVER_PATH" property="coverPath"/>
+		<result column="STATUS" property="status"/>
+	</resultMap>
+	
+
+	<select id="selectPlaylist" parameterType="int" resultMap="playlistResultSet">
+		SELECT *
+		FROM PLAYLIST
+		WHERE USER_NO = #{userNo} AND STATUS='Y'
+		ORDER BY TO_NUMBER(PLAYLIST_NO)
+	</select>
+	
+	<select id="selectAllSongs" >
+		SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+		FROM MUSIC M
+        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+		WHERE M.STATUS='Y'
+	</select>
+	
+	<select id="selectPlaylistSongs" parameterType="string" resultMap="musicResultSet">
+		SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, M.ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+		FROM PLAYLIST P
+		LEFT JOIN PLAYLIST_SONGS PS USING(PLAYLIST_NO)
+		JOIN MUSIC M USING(MUSIC_NO)
+        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+		WHERE PLAYLIST_NO = #{playlistNo} AND M.STATUS='Y'
+		ORDER BY PS.ENROLL_DATE
+	</select>
+	
+	<select id="getGenre" parameterType="string" resultType="string">
+		SELECT GENRE_NAME
+		FROM GENRE
+		WHERE USER_NO = #{userNo}
+	</select>
+	
+	<select id="nonGenreRecommendSongs" resultMap="musicResultSet">
+		SELECT *
+		FROM (
+			SELECT ROWNUM RNUM, A.*
+			FROM (
+				SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+				FROM MUSIC M
+		        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+				WHERE M.STATUS='Y'
+				ORDER BY DAILY_COUNT DESC
+			) A
+		)
+		WHERE RNUM &lt;= 20
+	</select>
+	
+	<select id="genreRecommendSongs" parameterType="list" resultMap="musicResultSet">
+		SELECT *
+		FROM (
+			SELECT ROWNUM RNUM, A.*
+			FROM (
+				SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+				FROM MUSIC M
+		        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+				WHERE M.STATUS='Y' AND ( 
+				<foreach collection="list" item="genre" separator=" OR ">				
+					UPPER(REPLACE(GENRE, ' ', '')) LIKE UPPER('%' || REPLACE(#{genre}, ' ', '') || '%')
+				</foreach>
+				)
+				ORDER BY DAILY_COUNT DESC
+			) A
+		)
+		WHERE RNUM &lt;= 20
+	</select>
+	
+	<select id="hourRecommendSongs" resultMap="musicResultSet">
+		SELECT *
+		FROM (
+			SELECT ROWNUM RNUM, A.*
+			FROM (
+				SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+				FROM MUSIC M
+		        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+				WHERE M.STATUS='Y'
+				ORDER BY HOUR_COUNT DESC
+			) A
+		)
+		WHERE RNUM &lt;= 20
+	</select>
+	
+	<select id="latestRecommendSongs" parameterType="string" resultMap="musicResultSet">
+		SELECT *
+		FROM (
+			SELECT ROWNUM RNUM, A.*
+			FROM (
+				SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+				FROM MUSIC M
+		        JOIN MUSIC_FILE MF USING(MUSIC_NO)
+				WHERE M.STATUS='Y'
+				ORDER BY M.ENROLL_DATE DESC
+			) A
+		)
+		WHERE RNUM &lt;= 20
+	</select>
+	
+	<select id="searchMusic" parameterType="string" resultMap="musicResultSet">
+		SELECT *
+		FROM (
+		    SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+		    FROM MUSIC M
+		    JOIN MUSIC_FILE MF USING(MUSIC_NO) 
+		    WHERE M.STATUS='Y' 
+		    	  AND (UPPER(REPLACE(M.MUSIC_TITLE, ' ', '')) LIKE UPPER('%' || REPLACE(#{keyword}, ' ', '') || '%')
+		    	  	   OR UPPER(REPLACE(M.MUSIC_ARTIST, ' ', '')) LIKE UPPER('%' || REPLACE(#{keyword}, ' ', '') || '%')
+		    	  	   OR UPPER(REPLACE(M.GENRE, ' ', '')) LIKE UPPER('%' || REPLACE(#{keyword}, ' ', '') || '%'))
+		    ORDER BY PLAY_COUNT DESC
+		)
+	</select>
+	<insert id="insertKeyword" parameterType="string">
+		INSERT INTO SEARCH
+		(
+			KEYWORD,
+			SEARCH_DATE
+		) VALUES (
+			#{keyword},
+			SYSDATE
+		)
+	</insert>
+	
+	<insert id="insertMusic" parameterType="music" useGeneratedKeys="true">
+		<selectKey keyProperty="musicNo" resultType="string" order="BEFORE">
+			SELECT SEQ_MUSIC_NO.NEXTVAL FROM DUAL
+			<!-- 보드번호를 일단 얻어와서 sql문 실행하기 before에 넣어준 뒤 아래 실행 -->
+		</selectKey>
+		INSERT INTO MUSIC
+		(
+			MUSIC_NO,
+			MUSIC_TITLE,
+			MUSIC_ARTIST,
+			MUSIC_LYRICS,
+			GENRE
+		) VALUES (
+			#{musicNo},
+			#{musicTitle},
+			#{musicArtist},
+			#{musicLyrics},
+			#{genre}
+		)
+	</insert>
+	
+	<insert id="insertMusicFile" parameterType="musicFile">
+		INSERT INTO MUSIC_FILE
+		(
+			MUSIC_NO,
+			MUSIC_ORIGIN_NAME,
+			MUSIC_CHANGE_NAME,
+			MUSIC_PATH,
+			COVER_ORIGIN_NAME,
+			COVER_CHANGE_NAME,
+			COVER_PATH
+		) VALUES (
+			#{musicNo},
+			#{musicOriginName},
+			#{musicChangeName},
+			#{musicPath},
+			#{coverOriginName},
+			#{coverChangeName},
+			#{coverPath}
+		)
+	</insert>
+	
+	<select id="selectOneMusic" parameterType="string" resultMap="musicResultSet">
+		SELECT MUSIC_NO, MUSIC_TITLE, MUSIC_ARTIST, MUSIC_LYRICS, GENRE, ENROLL_DATE, PLAY_COUNT, DAILY_COUNT, HOUR_COUNT, M.STATUS STATUS, MUSIC_PATH, COVER_PATH
+		FROM MUSIC M
+		JOIN MUSIC_FILE MF USING(MUSIC_NO)
+		WHERE M.STATUS = 'Y' AND MUSIC_NO = #{musicNo}
+	</select>
+	<select id="selectOneMusicFile" parameterType="string" resultMap="musicFileResultSet">
+		SELECT *
+		FROM MUSIC_FILE
+		WHERE MUSIC_NO = #{musicNo} AND STATUS='Y'
+	</select>
+	
+	<update id="updateMusic" parameterType="music">
+		UPDATE MUSIC
+		SET	MUSIC_TITLE = #{musicTitle}, MUSIC_ARTIST = #{musicArtist}, MUSIC_LYRICS = #{musicLyrics}, GENRE = #{genre} 
+		WHERE MUSIC_NO = #{musicNo} AND STATUS='Y'
+	</update>
+	
+	<update id="updateMusicFile" parameterType="musicFile">
+		UPDATE MUSIC_FILE
+		SET MUSIC_ORIGIN_NAME = #{musicOriginName},
+			MUSIC_CHANGE_NAME = #{musicChangeName},
+			MUSIC_PATH = #{musicPath},
+			COVER_ORIGIN_NAME = #{coverOriginName},
+			COVER_CHANGE_NAME = #{coverChangeName},
+			COVER_PATH = #{coverPath}
+		WHERE MUSIC_NO = #{musicNo} AND STATUS='Y'
+	</update>
+	
+	<update id="deleteMusic" parameterType="string">
+		UPDATE MUSIC
+		SET STATUS = 'N'
+		WHERE MUSIC_NO = #{musicNo}
+	</update>
+	<update id="deleteMusicFile" parameterType="string">
+		UPDATE MUSIC_FILE
+		SET STATUS = 'N'
+		WHERE MUSIC_NO = #{musicNo}
+	</update>
+	
+	<insert id="insertPlaylist" parameterType="map">
+		INSERT INTO PLAYLIST
+		(
+			PLAYLIST_NO,
+			USER_NO,
+			PLAYLIST_NAME,
+			STATUS
+		) VALUES (
+			SEQ_PLAYLIST_NO.NEXTVAL,
+			#{userNo},
+			#{playlistName},
+			'Y'
+		)
+	</insert>
+	
+	<delete id="deletePlaylist" parameterType="string">
+		DELETE FROM PLAYLIST
+		WHERE PLAYLIST_NO = #{playlistNo} AND STATUS = 'Y'
+	</delete>
+	<delete id="deleteSongsOfPlaylist" parameterType="string">
+		DELETE FROM PLAYLIST_SONGS
+		WHERE PLAYLIST_NO = #{playlistNo}
+	</delete>
+	
+	<insert id="addPlaylistSong" parameterType="map">
+		INSERT INTO PLAYLIST_SONGS
+		(
+			PLAYLIST_NO,
+			MUSIC_NO
+		) VALUES (
+			#{playlistNo},
+			#{musicNo}
+		)
+	</insert>
+	
+	<select id="selectPlaylistOneSongs" parameterType="map" resultType="string">
+		SELECT MUSIC_NO
+		FROM PLAYLIST_SONGS
+		WHERE PLAYLIST_NO = #{playlistNo} AND MUSIC_NO = #{musicNo}
+	</select>
+	
+	<delete id="removePlaylistSong" parameterType="map">
+		DELETE FROM PLAYLIST_SONGS
+		WHERE PLAYLIST_NO = #{playlistNo} AND MUSIC_NO = #{musicNo}
+	</delete>
+	
+	<update id="increaseCount" parameterType="string">
+		UPDATE MUSIC
+		SET PLAY_COUNT = PLAY_COUNT+1, DAILY_COUNT = DAILY_COUNT+1, HOUR_COUNT = HOUR_COUNT+1
+		WHERE MUSIC_NO = #{musicNo} AND STATUS = 'Y'
+	</update>
+	<update id="resetHourCount">
+		UPDATE MUSIC
+		SET HOUR_COUNT = 0
+	</update>
+	<update id="resetDailyCount">
+		UPDATE MUSIC
+		SET DAILY_COUNT = 0
+	</update>
+	
+	<select id="selectRanking" resultType="string">
+		<![CDATA[
+		SELECT KEYWORD, COUNT(*)
+		FROM SEARCH
+		WHERE SEARCH_DATE > SYSDATE-1/24
+		GROUP BY KEYWORD
+		ORDER BY COUNT(*) DESC
+		]]>
+	</select>
+
+</mapper>

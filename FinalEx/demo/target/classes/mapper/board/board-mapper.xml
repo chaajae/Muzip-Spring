@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="board">
+  	
+  	<resultMap type="board" id="boardResultSet">
+		<id column="BOARD_NO" property="boardNo"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="BOARD_CONTENT" property="boardContent"/>
+		<result column="CREATE_DATE" property="createDate"/>
+		<result column="SECRET" property="secret"/>
+		<result column="STATUS" property="status"/>
+		<result column="MUSIC_NO" property="musicNo"/>
+	</resultMap>
+	
+	 <resultMap type="reply" id="replyResultSet">
+	 	<id column="REPLY_NO" property="replyNo"/>
+	 	<result column="USER_NO" property="userNo"/>
+	 	<result column="REF_BNO" property="refBno"/>
+	 	<result column="REPLY_CONTENT" property="replyContent"/>
+	 	<result column="CREATE_DATE" property="createDate"/>
+	 	<result column="STATUS" property="status"/>
+	 </resultMap>
+	 
+	 <resultMap type="attachment" id="attachmentResultSet">
+	 	<id column="FILE_NO" property="fileNo"/>
+	 		<result column="USER_NO" property="userNo"/>
+	 		<result column="BOARD_NO" property="boardNo"/>
+	 		<result column="ORIGIN_NAME" property="originName"/>
+	 		<result column="CHANGE_NAME" property="changeName"/>
+	 		<result column="FILE_PATH" property="filePath"/>
+	 		<result column="UPLOAD_DATE" property="uploadDate"/>
+	 		<result column="FILE_LEVEL" property="fileLevel"/>
+	 		<result column="STATUS" property="status"/>
+	 </resultMap>
+	 
+	 
+	 <resultMap type="likeBoard" id="likeBoardResultSet">
+	 	
+	 		<result column="USER_NO" property="userNo"/>
+	 		<result column="BOARD_NO" property="boardNo"/>
+	 		
+	 </resultMap>
+	 
+	 
+	 <resultMap type="boardExt" id="selectBoardListResultSet">
+	 	
+	 	<id column="BOARD_NO" property="boardNo"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="USER_NAME" property="userId"/>
+		<result column="BOARD_CONTENT" property="boardContent"/>
+		<result column="CREATE_DATE" property="createDate"/>
+		<result column="SECRET" property="secret"/>
+		<result column="STATUS" property="status"/>
+		<result column="MUSIC_NO" property="musicNo"/>
+	 								<!-- ofType = 마이바티스식 제네릭 타입 -->
+	 	<collection property="attachList" ofType="attachment" javaType="java.util.List"
+	 	select="selectAttachmentList" column="BOARD_NO"/>
+	 	<!-- 
+	 		collection ofType : 제네릭타입,
+	 				 javaType : 자바의 자료형 => java.util.List<Attachment>
+	 				 property : collection결과를 저장할 boardExt타입의 필드명
+	 	 -->
+	 	 <collection property="replyList" ofType="reply" javaType="java.util.List"
+	 	 		select="selectReplyList" column="BOARD_NO"/>
+	 	 		
+ 		 <collection property="likeList" ofType="likeBoard" javaType="java.util.List"
+ 		select="selectLikeList" column="BOARD_NO"/>
+	 	 <!-- 
+	 	 	selectReplyList의 조회결과를 boardExt VO객체의 replyList필드에 담겠다는 의미.
+	 	 	replyList에 담을때 java.util.List<reply>객체를 생성해서 담을 예정.
+	 	 	selectReplyList를 호출할때 필요한 데이터(boardNo)의 경우 column="BOARD_NO"을 사용해서 현재 조회된
+	 	 	resultMap내부의 BOARD_NO값을 전달해준다.
+	 	  -->
+	 </resultMap>
+	 
+	 <resultMap type="reply" id="selectReplyOne">
+	 	<id column="REPLY_NO" property="replyNo"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="REF_BNO" property="refBno"/>
+		<result column="REPLY_CONTENT" property="replyContent"/>
+		<result column="CREATE_DATE" property="createDate"/>
+		<result column="STATUS" property="status"/>
+	 </resultMap>
+	 
+	 <resultMap id="userIdListResult" type="java.util.Map">
+	    <result column="USER_NO" property="key"/>
+	    <result column="USER_ID" property="value"/>
+	</resultMap>
+	
+	<resultMap id="profileImgListResult" type="java.util.Map">
+	    <result column="USER_NO" property="key"/>
+	    <result column="CHANGE_NAME" property="value"/>
+	</resultMap>
+	
+	<resultMap id="allMusicListResult" type="java.util.Map">
+	    <result column="MUSIC_NO" property="key"/>
+	    <result column="value" property="VALUE"/>
+	</resultMap>
+	
+	<select id="getAllMusicList" resultMap="allMusicListResult">
+		SELECT MUSIC_NO AS key, (MUSIC_ARTIST || ' - ' || MUSIC_TITLE) AS value
+	    FROM MUSIC
+	    WHERE STATUS = 'Y'
+    </select>
+    
+	 <select id="getUserIdList" resultMap="userIdListResult">
+	    SELECT USER_NO AS key, USER_NAME AS value
+	    FROM MEMBER
+	    WHERE STATUS = 'Y'
+	</select>
+	
+	<select id="getUserProfileImgList" resultMap="profileImgListResult">
+	    SELECT M.USER_NO AS key, NVL(A.CHANGE_NAME, 'noPorofile.jpg') AS value
+        FROM MEMBER M
+        LEFT JOIN ATTACHMENT A ON M.USER_NO = A.USER_NO AND A.FILE_LEVEL = 1
+        WHERE M.STATUS = 'Y' AND A.STATUS = 'Y'
+	</select>
+	 
+	 <select id="selectReplyList" parameterType="int" resultMap="replyResultSet">
+	 	SELECT *
+	 	FROM REPLY
+	 	WHERE REF_BNO = #{boardNo} 
+	 	ORDER BY TO_NUMBER(REPLY_NO) DESC
+	 </select>
+	 
+	 <select id="selectLikeList" parameterType="int" resultMap="likeBoardResultSet">
+	 	SELECT *
+	 	FROM LIKE_BOARD
+	 	WHERE BOARD_NO = #{boardNo} 
+	 </select>
+  	
+  	<select id="selectAttachmentList" parameterType="int" resultMap="attachmentResultSet">
+	 	SELECT *
+	 	FROM ATTACHMENT
+	 	WHERE BOARD_NO = #{boardNo} 
+	 	ORDER BY FILE_LEVEL
+	 </select>
+	 
+	 <select id="selectBoardList" resultMap="selectBoardListResultSet">
+	 	SELECT B.BOARD_NO,
+	 		   B.USER_NO,
+               M.USER_NAME,
+	 		   B.BOARD_CONTENT,
+	 		   B.CREATE_DATE,
+	 		   B.SECRET,
+	 		   B.STATUS,
+	 		   B.MUSIC_NO
+	 	FROM BOARD B
+        JOIN MEMBER M ON M.USER_NO = B.USER_NO
+	 	WHERE B.STATUS = 'Y' AND M.STATUS = 'Y'
+        ORDER BY TO_NUMBER(BOARD_NO) DESC
+	 </select>
+  
+  
+  
+  	<insert id="insertBoard" parameterType="board" useGeneratedKeys="true">
+  		<selectKey keyProperty="boardNo" resultType="string" order="BEFORE">
+			SELECT SEQ_BOARD_NO.NEXTVAL FROM DUAL
+		</selectKey>
+		
+		INSERT INTO BOARD
+		 VALUES(
+			#{boardNo},
+			#{userNo},
+			#{boardContent},
+			SYSDATE,
+			#{secret},
+			DEFAULT,
+			#{musicNo}
+		)
+  	</insert>
+  	
+  	
+  	<insert id="insertAttachmentList" parameterType="list">
+	 	INSERT INTO ATTACHMENT(FILE_NO, USER_NO, BOARD_NO, ORIGIN_NAME ,CHANGE_NAME,FILE_PATH ,UPLOAD_DATE, FILE_LEVEL, STATUS)
+	 	SELECT SEQ_FILE_NO.NEXTVAL AS FILE_NO, C.* FROM
+	 	(
+	 		<foreach collection="list" item="attach" separator="UNION ALL">
+	 			SELECT
+	 				#{attach.userNo} as USER_NO,
+	 				#{attach.boardNo} as BOARD_NO,
+	 				#{attach.originName} as ORIGIN_NAME,
+	 				#{attach.changeName} as CHANGE_NAME,
+	 				#{attach.filePath} as FILE_PATH,
+	 				SYSDATE as UPLOAD_DATE,
+	 				#{attach.fileLevel} as FILE_LEVEL,
+	 				'Y' as STATUS
+	 			FROM DUAL
+	 		</foreach>	
+	 	) C
+	 </insert>
+  	
+  	<select id="getUserId" parameterType="string" resultType="string">
+  		SELECT USER_ID
+  		FROM MEMBER
+  		WHERE USER_NO = #{userNo}
+  	</select>
+  	
+  	<select id="getUserProfileImg" parameterType="string" resultType="string">
+  		SELECT CHANGE_NAME
+  		FROM ATTACHMENT
+  		WHERE USER_NO = #{userNo} AND STATUS = 'Y' AND FILE_LEVEL = 1
+  	</select>
+  
+  	<select id="selectBoomUp" resultType="int" parameterType="map">
+  		SELECT *
+  		FROM LIKE_BOARD
+  		WHERE USER_NO = #{userNo} AND BOARD_NO = #{boardNo}
+  	</select>
+  	
+  	<delete id="deleteBoomUp" parameterType="map">
+  		DELETE FROM LIKE_BOARD
+  		WHERE USER_NO = #{userNo} AND BOARD_NO = #{boardNo}
+  	</delete>
+  
+  	<insert id="insertBoomUp" parameterType="map">
+  		INSERT INTO LIKE_BOARD VALUES(
+  			#{userNo},
+  			#{boardNo}
+  		)
+  	</insert>
+  	
+  	<insert id="insertReply" parameterType="reply">
+  		
+  		<selectKey keyProperty="replyNo" resultType="string" order="BEFORE">
+			SELECT SEQ_REPLY_NO.NEXTVAL FROM DUAL
+		</selectKey>
+  	
+  		INSERT INTO REPLY VALUES(
+  			#{replyNo},
+  			#{userNo},
+  			#{refBno},
+  			#{replyContent},
+  			SYSDATE,
+  			DEFAULT
+  		)
+  	</insert>
+  	
+  	<select id="selectReplyOne" parameterType="int" resultMap="selectReplyOne">
+  		SELECT *
+  		FROM REPLY
+  		WHERE REPLY_NO = #{replyNo}
+  	</select>
+  	
+  	<update id="updateBoard" parameterType="board">
+  		UPDATE BOARD
+		SET BOARD_CONTENT = #{boardContent},
+			SECRET = #{secret},
+			MUSIC_NO = #{musicNo}
+		WHERE BOARD_NO = #{boardNo}
+  	</update>
+  	
+  	
+  	<delete id="deleteAttachment" parameterType="map">
+		DELETE FROM ATTACHMENT
+		WHERE BOARD_NO = #{boardNo}
+			AND FILE_LEVEL IN (${deleteList})
+  	</delete>
+  	
+  	<insert id="insertAttachment" parameterType="attachment">
+  		INSERT INTO ATTACHMENT VALUES(
+			SEQ_FILE_NO.NEXTVAL,
+			#{userNo},
+			#{boardNo},
+			#{originName},
+			#{changeName},
+			#{filePath},
+			SYSDATE,
+			#{fileLevel},
+			DEFAULT
+		)
+  	</insert>
+  	
+  	
+  	<select id="getMyBoard" parameterType="string" resultMap="selectBoardListResultSet">
+	 	SELECT BOARD_NO,
+	 		   USER_NO,
+	 		   BOARD_CONTENT,
+	 		   CREATE_DATE,
+	 		   SECRET,
+	 		   STATUS,
+	 		   MUSIC_NO
+	 	FROM BOARD
+	 	WHERE STATUS = 'Y' AND USER_NO = #{userNo}
+	 	ORDER BY TO_NUMBER(BOARD_NO) DESC
+	 </select>
+  	
+  	
+  	<delete id="deleteBoard" parameterType="string">
+  		DELETE FROM BOARD
+		WHERE BOARD_NO = #{boardNo}
+  	</delete>
+  	
+  	<delete id="deleteBoardAt" parameterType="string">
+  		DELETE FROM ATTACHMENT
+		WHERE BOARD_NO = #{boardNo}
+  	</delete>
+  	
+  	<delete id="deleteBoardLB" parameterType="string">
+  		DELETE FROM LIKE_BOARD
+		WHERE BOARD_NO = #{boardNo}
+  	</delete>
+  	
+  	<delete id="deleteBoardR" parameterType="string">
+  		DELETE FROM REPLY
+		WHERE REF_BNO = #{boardNo}
+  	</delete>
+  
+  	<delete id="deleteReply" parameterType="reply">
+  		DELETE FROM REPLY
+		WHERE REPLY_NO = #{replyNo}
+  	</delete>
+</mapper>

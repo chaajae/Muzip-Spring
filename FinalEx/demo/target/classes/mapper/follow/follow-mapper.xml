@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="follow">
+ <resultMap id="followResultSet" type="follow">
+        <result column="USER_ID" property="userId"/>
+        <result column="MEMBER_ID" property="memberId"/>
+        <result column="STATUS" property="status"/>
+        <!-- 추가된 부분 -->
+        <result column="USER_NO" property="userNo"/>
+        <result column="MEMBER_NO" property="memberNo"/>
+    </resultMap>
+<select id = "checkFollowCount" parameterType ="string" resultType="int">
+	SELECT COUNT(*)
+	FROM FOLLOW
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+</select>
+<select id ="checkFollow" parameterType="string" resultType="int">
+	SELECT COUNT(*)
+	FROM FOLLOW
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId} AND STATUS = 'Y'
+</select>
+<insert id ="insertFollow" parameterType="string">
+	INSERT INTO FOLLOW
+	VALUES(#{userId},#{memberId},'N')
+</insert>
+<update id="addFollow" parameterType="Follow">
+    UPDATE FOLLOW
+	SET STATUS = 'Y'
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+</update>
+
+<update id ="unFollow" parameterType="string">
+	UPDATE FOLLOW
+	SET STATUS = 'N'
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+</update>
+ 	 
+    
+     <select id="getFollowsByUserId" parameterType="string" resultMap="followResultSet">
+        SELECT f.USER_ID, f.MEMBER_ID, f.STATUS, m1.USER_NO as USER_NO, m2.USER_NO as MEMBER_NO
+        FROM FOLLOW f
+        JOIN MEMBER m1 ON f.USER_ID = m1.USER_ID
+        JOIN MEMBER m2 ON f.MEMBER_ID = m2.USER_ID
+        WHERE f.USER_ID = #{userId} AND f.STATUS = 'Y'
+    </select>
+
+    <select id="getFollowerList" parameterType="string" resultMap="followResultSet">
+        SELECT f.USER_ID, f.MEMBER_ID, f.STATUS, m1.USER_NO as USER_NO, m2.USER_NO as MEMBER_NO
+        FROM FOLLOW f
+        JOIN MEMBER m1 ON f.USER_ID = m1.USER_ID
+        JOIN MEMBER m2 ON f.MEMBER_ID = m2.USER_ID
+        WHERE f.MEMBER_ID = #{userId} AND f.STATUS = 'Y'
+    </select>
+    
+     <select id="getFollowByUserIdAndMemberId" parameterType="map" resultMap="followResultSet">
+        SELECT f.USER_ID, f.MEMBER_ID, f.STATUS, m1.USER_NO as USER_NO, m2.USER_NO as MEMBER_NO
+        FROM FOLLOW f
+        JOIN MEMBER m1 ON f.USER_ID = m1.USER_ID
+        JOIN MEMBER m2 ON f.MEMBER_ID = m2.USER_ID
+        WHERE f.USER_ID = #{userId} 
+        AND f.MEMBER_ID = #{memberId}
+    </select>
+    
+<select id = "chatRoomFriend" parameterType="string" resultMap="followResultSet">
+	SELECT FOLLOW.MEMBER_ID, FOLLOW.STATUS, MEMBER.USER_NO
+	FROM FOLLOW
+	JOIN MEMBER ON FOLLOW.MEMBER_ID = MEMBER.USER_ID
+	WHERE FOLLOW.USER_ID = #{userId} AND FOLLOW.STATUS = 'Y'
+</select>
+<select id="searchMembers" parameterType="string" resultMap="followResultSet">
+	SELECT MEMBER_ID,MEMBER.USER_NO
+	FROM FOLLOW
+	JOIN MEMBER ON FOLLOW.MEMBER_ID = MEMBER.USER_ID
+	WHERE FOLLOW.USER_ID = #{userId} AND FOLLOW.MEMBER_ID LIKE '%'|| #{query}|| '%' AND FOLLOW.STATUS ='Y'
+</select>
+</mapper>

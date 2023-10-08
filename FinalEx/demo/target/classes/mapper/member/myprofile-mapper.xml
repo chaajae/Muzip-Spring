@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="myprofile">
+
+	<resultMap type="attachment" id="attachmentResultSet">
+		<id column="FILE_NO" property="fileNo"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="BOARD_NO" property="boardNo"/>
+		<result column="ORIGIN_NAME" property="originName"/>
+		<result column="CHANGE_NAME" property="changeName"/>
+		<result column="FILE_PATH" property="filePath"/>
+		<result column="UPLOAD_DATE" property="uploadDate"/>
+		<result column="FILE_LEVEL" property="fileLevel"/>
+		<result column="STATUS" property="status"/>
+	</resultMap>
+	<resultMap id="memberResultSet" type="member">
+		<id column = "USER_NO" property="userNo"/>
+		<result column = "USER_ID" property="userId"/>
+		<result column = "USER_PWD" property="userPwd"/>
+		<result column = "USER_NAME" property="userName"/>
+		<result column = "EMAIL" property="email"/>
+		<result column = "ENROLL_DATE" property="enrollDate"/>
+		<result column = "USER_INFO" property="userInfo"/>
+		<result column = "BACKMUSIC_NO" property="backMuNo"/>
+		<result column = "STATUS" property="status"/>
+	</resultMap>
+	
+	<update id="deactivateImage">
+	    UPDATE ATTACHMENT
+	    SET STATUS = 'N'
+	    WHERE USER_NO = #{userNo} AND FILE_LEVEL = #{fileLevel} AND STATUS = 'Y'
+	</update>
+	
+	 <insert id="insertProfileImg" parameterType="attachment">
+        INSERT INTO ATTACHMENT (FILE_NO, USER_NO, BOARD_NO, ORIGIN_NAME, CHANGE_NAME, FILE_PATH, UPLOAD_DATE, FILE_LEVEL, STATUS)
+        VALUES (SEQ_FILE_NO.NEXTVAL,#{userNo}, #{boardNo}, #{originName}, #{changeName}, #{filePath}, SYSDATE, #{fileLevel}, #{status})
+    </insert>
+
+    
+    <insert id="insertBackImg" parameterType="attachment">
+        INSERT INTO ATTACHMENT (FILE_NO, USER_NO, BOARD_NO, ORIGIN_NAME, CHANGE_NAME, FILE_PATH, UPLOAD_DATE, FILE_LEVEL, STATUS)
+        VALUES (SEQ_FILE_NO.NEXTVAL,#{userNo}, #{boardNo}, #{originName}, #{changeName}, #{filePath}, SYSDATE, #{fileLevel}, #{status})
+    </insert>
+	
+	<update id="saveMemberInfo" parameterType="member">
+	    UPDATE MEMBER
+	    SET 
+	        USER_INFO = #{userInfo},
+	        BACKMUSIC_NO = #{backMuNo}
+	    WHERE
+	        USER_NO = #{userNo}
+	</update>
+	
+	
+	<select id="getMemberByUserNo" resultMap="memberResultSet">
+	    SELECT * FROM MEMBER WHERE USER_NO = #{userNo}
+	</select>
+	
+		
+	<select id="getAttachmentsByUserNo" resultMap="attachmentResultSet">
+	    SELECT * FROM ATTACHMENT WHERE USER_NO = #{userNo} AND STATUS = 'Y'
+	</select>
+	
+	<select id="getUserData" resultMap="memberResultSet">
+	    SELECT * FROM MEMBER WHERE USER_NO = #{userNo}
+	</select>
+	
+	
+	
+</mapper>

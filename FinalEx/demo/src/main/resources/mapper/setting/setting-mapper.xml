@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="setting">
+	<resultMap id="memberResultSet" type="member">
+		<id column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="USER_PWD" property="userPwd" />
+		<result column="USER_NAME" property="userName" />
+		<result column="EMAIL" property="email" />
+		<result column="ENROLL_DATE" property="enrollDate" />
+		<result column="USER_INFO" property="userInfo" />
+		<result column="STATUS" property="status" />
+	</resultMap>
+
+
+	<resultMap id="settingResultSet" type="setting">
+		<id column="USER_NO" property="userNo" />
+		<result column="AUTO_PLAY" property="autoPlay" />
+		<result column="THEME" property="theme" />
+		<result column="CHAT_ALARM" property="chatAlarm" />
+		<result column="MUSIC_ALARM" property="musicAlarm" />
+		<result column="COMMENT_ALARM" property="commentAlarm" />
+		<result column="MUSIC_NO" property="musicNo" />
+	</resultMap>
+
+	<resultMap id="contactResultSet" type="contact">
+		<id column="CONTACT_NO" property="contactNo" />
+		<result column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="CONTACT_TITLE" property="contactTitle" />
+		<result column="CONTACT_CONT" property="contactCont" />
+		<result column="CONTACT_DATE" property="contactDate" />
+		<result column="ADMIN_REPLY" property="adminReply" />
+		<result column="STATUS" property="status" />
+	</resultMap>
+
+
+
+	<!-- 설정코드 추가- -->
+
+	<select id="getGenre" parameterType="int" resultType="genre">
+		SELECT *
+		FROM GENRE
+		WHERE USER_NO = #{userNo}
+	</select>
+
+	<delete id="deleteGenre" parameterType="int">
+		DELETE FROM GENRE
+		WHERE
+		USER_NO = #{userNo}
+	</delete>
+
+	<insert id="insertGenre" parameterType="map">
+
+		INSERT INTO
+		GENRE(USER_NO, GENRE_NAME)
+		VALUES (#{userNo} , #{genreName})
+
+	</insert>
+
+	<update id="setMemberinfo" parameterType="map">
+		UPDATE MEMBER
+		SET
+		USER_NAME = #{userName},
+		EMAIL = #{email}
+		WHERE USER_NO = #{userNo}
+	</update>
+
+	<update id="setpassword" parameterType="map">
+		UPDATE MEMBER
+		SET USER_PWD
+		= #{changePwd}
+		WHERE USER_NO = #{userNo}
+	</update>
+
+	<select id="getSetting" parameterType="int"
+		resultMap="settingResultSet">
+		SELECT *
+		FROM SETTING
+		WHERE USER_NO = #{userNo}
+	</select>
+
+	<!-- 알람설정변경 -->
+	<update id="setautoPlay" parameterType="map">
+		UPDATE SETTING
+		SET
+		AUTO_PLAY = #{result}
+		WHERE USER_NO = #{userNo}
+	</update>
+	<update id="settheme" parameterType="map">
+		UPDATE SETTING
+		SET THEME =
+		#{result}
+		WHERE USER_NO = #{userNo}
+	</update>
+	<update id="setchatAlarm" parameterType="map">
+		UPDATE SETTING
+		SET
+		CHAT_ALARM = #{result}
+		WHERE USER_NO = #{userNo}
+	</update>
+	<update id="setmusicAlarm" parameterType="map">
+		UPDATE SETTING
+		SET
+		MUSIC_ALARM = #{result}
+		WHERE USER_NO = #{userNo}
+	</update>
+	<update id="setcommentAlarm" parameterType="map">
+		UPDATE SETTING
+		SET
+		COMMENT_ALARM = #{result}
+		WHERE USER_NO = #{userNo}
+	</update>
+
+	<!-- 회원탈퇴 -->
+	<update id="withdrawal" parameterType="int">
+		UPDATE MEMBER
+		SET STATUS =
+		'N'
+		WHERE USER_NO = #{userNo}
+	</update>
+
+	<insert id="insertsetting" parameterType="int">
+		INSERT INTO
+		SETTING(USER_NO,AUTO_PLAY,THEME,CHAT_ALARM,MUSIC_ALARM,COMMENT_ALARM)
+		VALUES(#{userNo}, 'Y', 'N', 'Y', 'Y', 'Y')
+	</insert>
+
+	<insert id="updateMembership" parameterType="paymentHistory">
+		INSERT INTO
+		PAYMENT_HISTORY VALUES(
+		SEQ_PAYMENT_NO.NEXTVAL,
+		SYSDATE,
+		#{userNo},
+		#{membershipNo}
+		)
+
+	</insert>
+
+	<update id="membershipUpdate" parameterType="paymentHistory">
+		UPDATE MEMBER
+		SET
+		MEMBERSHIP_NO = #{membershipNo}
+		WHERE USER_NO = #{userNo}
+	</update>
+
+
+	<select id="selectContactListCount" parameterType="map"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM CONTACT C
+		JOIN MEMBER M ON C.USER_NO = M.USER_NO
+
+		<if test="researchinput != null and researchinput !=''">
+			<choose>
+				<when test="category == 'title'">
+					WHERE C.CONTACT_TITLE LIKE '%' || #{researchinput}
+					|| '%'
+				</when>
+				<when test="category == 'content'">
+					WHERE C.CONTACT_CONT LIKE '%' || #{researchinput} ||
+					'%'
+				</when>
+				<when test="category == 'userId'">
+					WHERE M.USER_ID LIKE '%' || #{researchinput} || '%'
+				</when>
+			</choose>
+		</if>
+		<if test="userNo != null">
+			AND C.STATUS = 'Y'
+			AND C.USER_NO = TO_NUMBER(#{userNo})
+		</if>
+	</select>
+
+
+	<select id="selectContactList" parameterType="map"
+		resultType="contact">
+		SELECT C.CONTACT_NO, M.USER_ID, C.USER_NO, C.CONTACT_TITLE,
+		C.CONTACT_CONT, C.CONTACT_DATE, C.ADMIN_REPLY, C.STATUS
+		FROM CONTACT C
+		JOIN MEMBER M ON C.USER_NO = M.USER_NO
+
+		<if test="researchinput != null and researchinput !=''">
+			<choose>
+				<when test="category == 'title'">
+					WHERE C.CONTACT_TITLE LIKE '%' || #{researchinput}
+					||'%'
+				</when>
+				<when test="category == 'content'">
+					WHERE C.CONTACT_CONT LIKE '%' || #{researchinput} ||
+					'%'
+				</when>
+				<when test="category == 'userId'">
+					WHERE M.USER_ID LIKE '%' || #{researchinput} || '%'
+				</when>
+			</choose>
+		</if>
+		<if test="userNo != null">
+			AND C.STATUS = 'Y'
+			AND C.USER_NO = TO_NUMBER(#{userNo})
+		</if>
+		ORDER BY TO_NUMBER(CONTACT_NO) DESC
+	</select>
+
+	<insert id="insertContact" parameterType="map">
+		INSERT INTO CONTACT
+		(
+		CONTACT_NO,
+		USER_NO,
+		CONTACT_TITLE,
+		CONTACT_CONT,
+		CONTACT_DATE,
+		ADMIN_REPLY,
+		STATUS
+		) VALUES (
+		SEQ_CONTACT_NO.NEXTVAL,
+		#{userNo},
+		#{contactTitle},
+		#{contactCont},
+		SYSDATE,
+		'',
+		'Y'
+		)
+	</insert>
+
+
+</mapper>

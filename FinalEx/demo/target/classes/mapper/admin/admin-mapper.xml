@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="admin">
+
+	<resultMap id="memberResultSet" type="member">
+		<id column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="USER_PWD" property="userPwd" />
+		<result column="USER_NAME" property="userName" />
+		<result column="EMAIL" property="email" />
+		<result column="ENROLL_DATE" property="enrollDate" />
+		<result column="USER_INFO" property="userInfo" />
+		<result column="BACKMUSIC_NO" property="backMuNo" />
+		<result column="MEMBERSHIP_NO" property="membershipNo" />
+		<result column="STATUS" property="status" />
+	</resultMap>
+
+	<resultMap type="board" id="boardResultSet">
+		<id column="BOARD_NO" property="boardNo" />
+		<result column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="BOARD_CONTENT" property="boardContent" />
+		<result column="CREATE_DATE" property="createDate" />
+		<result column="SECRET" property="secret" />
+		<result column="STATUS" property="status" />
+		<result column="MUSIC_NO" property="musicNo" />
+	</resultMap>
+
+	<resultMap id="musicResultSet" type="music">
+		<id column="MUSIC_NO" property="musicNo" />
+		<result column="MUSIC_TITLE" property="musicTitle" />
+		<result column="MUSIC_ARTIST" property="musicArtist" />
+		<result column="MUSIC_LYRICS" property="musicLyrics" />
+		<result column="GENRE" property="genre" />
+		<result column="ENROLL_DATE" property="enrollDate" />
+		<result column="PLAY_COUNT" property="playCount" />
+		<result column="DAILY_COUNT" property="dailyCount" />
+		<result column="HOUR_COUNT" property="hourCount" />
+		<result column="MUSIC_PATH" property="musicPath" />
+		<result column="COVER_PATH" property="coverPath" />
+		<result column="STATUS" property="status" />
+	</resultMap>
+
+	<resultMap id="contactResultSet" type="contact">
+		<id column="CONTACT_NO" property="contactNo" />
+		<result column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="CONTACT_TITLE" property="contactTitle" />
+		<result column="CONTACT_CONT" property="contactCont" />
+		<result column="CONTACT_DATE" property="contactDate" />
+		<result column="ADMIN_REPLY" property="adminReply" />
+		<result column="STATUS" property="status" />
+	</resultMap>
+
+	<resultMap id="paymentResultSet" type="paymentHistory">
+		<id column="PAYMENT_NO" property="paymentNo" />
+		<result column="PAYMENT_DATE" property="paymentDate" />
+		<result column="USER_NO" property="userNo" />
+		<result column="USER_ID" property="userId" />
+		<result column="MEMBERSHIP_NO" property="membershipNo" />
+		<result column="MEMBERSHIP_PRICE" property="membershipPrice" />
+	</resultMap>
+
+<!-- 회원관리 -->
+	<select id="selectMemberListCount" resultType="int">
+		SELECT COUNT(*)
+		FROM MEMBER
+	</select>
+	
+
+	<select id="selectMemberList" resultType="member">
+		SELECT *
+		FROM MEMBER
+		ORDER BY TO_NUMBER(USER_NO) DESC
+	</select>
+	
+	
+	<update id="updateMemberinfo"  parameterType="member">
+		UPDATE MEMBER
+		SET 
+			USER_ID = #{userId},
+			USER_NAME = #{userName},
+			EMAIL = #{email},
+			MEMBERSHIP_NO = #{membershipNo},
+			STATUS = #{status}
+		WHERE USER_NO = #{userNo}
+	</update>
+	
+	<update id="WithdrawalMemberinfo"  parameterType="member">
+		UPDATE MEMBER
+		SET STATUS = 'N'
+		WHERE USER_NO = #{userNo}
+	</update>
+	
+	
+	<update id="RestoreMemberinfo"  parameterType="member">
+		UPDATE MEMBER
+		SET STATUS = 'Y'
+		WHERE USER_NO = #{userNo}
+	</update>
+	
+	<!-- 여기는 멤버리스트 정렬 -->
+	<select id="selectMemberListBySort" resultMap="memberResultSet">
+	    SELECT * 
+	    FROM MEMBER
+	    <where>
+	        <choose>
+	            <when test="searchTerm != null and searchTerm != ''">
+	               (USER_NO LIKE CONCAT(CONCAT('%', #{searchTerm}), '%') OR 
+					USER_NAME LIKE CONCAT(CONCAT('%', #{searchTerm}), '%') OR 
+					USER_ID LIKE CONCAT(CONCAT('%', #{searchTerm}), '%') OR 
+					EMAIL LIKE CONCAT(CONCAT('%', #{searchTerm}), '%'))
+
+	            </when>
+	            <otherwise>
+	                <!-- 이 경우에는 모든 회원을 가져옵니다. -->
+	            </otherwise>
+	        </choose>
+	    </where>
+	    <choose>
+	        <when test="sortBy == 'userNo'">
+	            ORDER BY TO_NUMBER(USER_NO) ASC
+	        </when>
+	        <when test="sortBy == 'userName'">
+	            ORDER BY USER_NAME
+	        </when>
+	        <when test="sortBy == 'userId'">
+	            ORDER BY USER_ID
+	        </when>
+	        <otherwise>
+	            ORDER BY TO_NUMBER(USER_NO) DESC 
+	        </otherwise>
+	    </choose>
+	</select>
+	
+	<!-- 회원 끝 게시글 시작 -->
+	<select id="selectContentListCount" resultType="int">
+		SELECT COUNT(*)
+		FROM BOARD
+	</select>
+
+	<select id="selectContentList" resultType="board" parameterType="map">
+	    SELECT B.BOARD_NO,B.USER_NO, M.USER_ID, B.BOARD_CONTENT, B.CREATE_DATE, B.SECRET, B.MUSIC_NO, B.STATUS
+	    FROM BOARD B
+	    JOIN MEMBER M ON B.USER_NO = M.USER_NO
+	    <where>
+	        <if test="searchTerm != null and searchType != null">
+	            <choose>
+	                <when test="searchType == 'boardContent'">
+	                   AND B.BOARD_CONTENT LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'userId'">
+	                   AND M.USER_ID LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'boardNo'">
+	                   AND B.BOARD_NO LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'createDate'">
+	                   AND B.CREATE_DATE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	            </choose>
+	        </if>
+	    </where>
+	    <choose>
+	        <when test="sortBy == 'boardNo'">
+	            ORDER BY TO_NUMBER(B.BOARD_NO) ASC
+	        </when>
+	        <when test="sortBy == 'createDate'">
+	            ORDER BY B.CREATE_DATE DESC
+	        </when>
+	        <when test="sortBy == 'userId'">
+	            ORDER BY M.USER_ID DESC
+	        </when>
+	        <otherwise>
+	            ORDER BY TO_NUMBER(B.BOARD_NO) DESC
+	        </otherwise>
+	    </choose>
+	</select>
+	
+	<!-- 게시글의 총 개수를 반환하는 쿼리 (검색 유형 및 검색어 기반) -->
+	<select id="selectContentListCountByType" resultType="int">
+	    SELECT COUNT(B.BOARD_NO)
+	    FROM BOARD B
+	    JOIN MEMBER M ON B.USER_NO = M.USER_NO
+	    <where>
+	        <if test="searchType != null and searchTerm != null">
+	            <choose>
+	                <when test="searchType == 'boardContent'">
+	                   AND B.BOARD_CONTENT LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'userId'">
+	                   AND M.USER_ID LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'boardNo'">
+	                   AND B.BOARD_NO LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'createDate'">
+	                   AND B.CREATE_DATE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	            </choose>
+	        </if>
+	    </where>
+	</select>
+
+
+
+	<update id="adminDeleteContent"  parameterType="board">
+		UPDATE BOARD
+		SET STATUS = 'N'
+		WHERE BOARD_NO = #{boardNo}
+	</update>
+	
+	
+	<update id="adminRestoreContent"  parameterType="board">
+		UPDATE BOARD
+		SET STATUS = 'Y'
+		WHERE BOARD_NO = #{boardNo}
+	</update>
+
+	<!-- 글관리 끝 뮤직 시작-->
+	
+	<select id="selectMusicListCount" resultType="int">
+		SELECT COUNT(*)
+		FROM MUSIC
+	</select>
+
+	<select id="selectMusicList" resultType="music">
+		SELECT *
+	    FROM MUSIC
+	    JOIN MUSIC_FILE USING(MUSIC_NO)
+	    <where>
+	        <if test="searchTerm != null and searchType != null">
+	            <choose>
+	                <when test="searchType == 'musicNo'">
+	                   AND MUSIC_NO LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'musicTitle'">
+	                   AND MUSIC_TITLE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'musicArtist'">
+	                   AND MUSIC_ARTIST LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'enrollDate'">
+	                   AND ENROLL_DATE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'genre'">
+	                   AND GENRE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	            </choose>
+	        </if>
+	    </where>
+	    <choose>
+	        <when test="sortBy == 'musicNo'">
+	            ORDER BY TO_NUMBER(MUSIC_NO) ASC
+	        </when>
+	        <when test="sortBy == 'musicTitle'">
+	            ORDER BY MUSIC_TITLE DESC
+	        </when>
+	        <when test="sortBy == 'musicArtist'">
+	            ORDER BY MUSIC_ARTIST DESC
+	        </when>
+	        <otherwise>
+	            ORDER BY TO_NUMBER(MUSIC_NO) DESC
+	        </otherwise>
+	    </choose>
+	</select>
+		
+	<!-- 게시글의 총 개수를 반환하는 쿼리 (검색 유형 및 검색어 기반) -->
+	<select id="selectMusicListCountByType" resultType="int">
+	    SELECT COUNT(MUSIC_NO)
+	    FROM MUSIC
+	    <where>
+	        <if test="searchTerm != null and searchType != null">
+	            <choose>
+	                <when test="searchType == 'musicNo'">
+	                   AND MUSIC_NO LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'musicTitle'">
+	                   AND MUSIC_TITLE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'musicArtist'">
+	                   AND MUSIC_ARTIST LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'enrollDate'">
+	                   AND ENROLL_DATE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	                <when test="searchType == 'genre'">
+	                   AND GENRE LIKE CONCAT(CONCAT('%', #{searchTerm}), '%')
+	                </when>
+	            </choose>
+	        </if>
+	    </where>
+	</select>
+
+	<update id="adminDeleteMusic"  parameterType="music">
+		UPDATE MUSIC
+		SET STATUS = 'N'
+		WHERE MUSIC_NO = #{musicNo}
+	</update>
+	
+	
+	<update id="adminRestoreMusic"  parameterType="music">
+		UPDATE MUSIC
+		SET STATUS = 'Y'
+		WHERE MUSIC_NO = #{musicNo}
+	</update>
+
+	<!-- 뮤직 끝 -->
+
+	<!-- 문의 관리자 답변업데이트 -->
+	<update id="updateAdminReply" parameterType="map">
+		UPDATE CONTACT
+		SET
+		ADMIN_REPLY = #{adminReply}
+		WHERE CONTACT_NO = TO_NUMBER(#{contactNo})
+	</update>
+
+	<!-- 문의삭제 -->
+	<update id="DeleteContact" parameterType="map">
+		UPDATE CONTACT
+		SET
+		STATUS = 'N'
+		WHERE CONTACT_NO = TO_NUMBER(#{contactNo})
+	</update>
+
+	<!-- 문의복구 -->
+	<update id="RestoreContact" parameterType="map">
+		UPDATE CONTACT
+		SET
+		STATUS = 'Y'
+		WHERE CONTACT_NO = TO_NUMBER(#{contactNo})
+	</update>
+
+	<!-- 결제목록개수 -->
+	<select id="selectPaymentListCount" parameterType="map"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM PAYMENT_HISTORY P
+		JOIN MEMBER M ON P.USER_NO = M.USER_NO
+		<if test="researchinput != null and researchinput !=''">
+			<choose>
+				<when test="category == 'membershipNo'">
+					WHERE P.MEMBERSHIP_NO LIKE '%' || #{researchinput}
+					|| '%'
+				</when>
+				<when test="category == 'userId'">
+					WHERE M.USER_ID LIKE '%' || #{researchinput} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+
+	<!-- 결제목록리스트 -->
+	<select id="selectPaymentList" parameterType="map"
+		resultMap="paymentResultSet">
+		SELECT P.PAYMENT_NO, M.USER_ID, P.USER_NO, P.PAYMENT_DATE, P.MEMBERSHIP_NO, MS.MEMBERSHIP_PRICE 
+		FROM PAYMENT_HISTORY P
+		JOIN MEMBER M ON P.USER_NO = M.USER_NO
+		JOIN MEMBERSHIP MS ON P.MEMBERSHIP_NO = MS.MEMBERSHIP_NO
+
+		<if test="researchinput != null and researchinput !=''">
+			<choose>
+				<when test="category == 'membershipNo'">
+					WHERE P.MEMBERSHIP_NO LIKE '%' || #{researchinput}
+					|| '%'
+				</when>
+				<when test="category == 'userId'">
+					WHERE M.USER_ID LIKE '%' || #{researchinput} || '%'
+				</when>
+			</choose>
+		</if>
+		ORDER BY TO_NUMBER(PAYMENT_NO) DESC
+	</select>
+
+
+
+
+
+
+
+
+</mapper>

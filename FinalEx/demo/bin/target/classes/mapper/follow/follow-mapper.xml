@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="follow">
+<resultMap id="followResultSet" type="follow">
+	<result column = "USER_ID" property="userId"/>
+	<result column = "MEMBER_ID" property="memberId"/>
+	<result column = "STATUS" property="status"/>
+</resultMap>
+<select id ="checkFollow" parameterType="string" resultType="int">
+	SELECT COUNT(*)
+	FROM FOLLOW
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId} AND STATUS = 'Y'
+</select>
+
+<update id="addFollow" parameterType="Follow">
+    <choose>
+        <when test="statusFromDB == 'N'">
+            UPDATE FOLLOW
+            SET STATUS = 'Y'
+            WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+        </when>
+        <when test="statusFromDB == 'Y'">
+            UPDATE FOLLOW
+            SET STATUS = 'N'
+            WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+        </when>
+        <otherwise>
+            INSERT INTO FOLLOW (USER_ID, MEMBER_ID, STATUS)
+            VALUES (#{userId}, #{memberId}, 'Y')
+        </otherwise>
+    </choose>
+</update>
+
+
+
+<update id ="unFollow" parameterType="string">
+	UPDATE FOLLOW
+	SET STATUS = 'N'
+	WHERE USER_ID = #{userId} AND MEMBER_ID = #{memberId}
+</update>
+</mapper>

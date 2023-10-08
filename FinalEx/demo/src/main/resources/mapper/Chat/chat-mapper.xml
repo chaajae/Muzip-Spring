@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="chat">
+<resultMap id = "chatRoomResultSet" type="chatRoom">
+	<id column = "CHATROOM_NO" property="chatroomNo"/>
+	<result column ="USER_NO" property="userId"/>
+	<result column = "CHATROOM_NAME" property="chatroomName"/>
+	<result column = "STATUS" property="status"/>
+	<result column = "MESSAGE" property="viewMsg"/>
+	<result column = "CREATE_DATE" property="viewDate"/>
+</resultMap>
+
+<resultMap id="chatMessageResultSet" type="chatMessage">
+	<id column = "MSG_NO" property="msgNo" />
+	<result column = "CHATROOM_NO"  property="chatroomNo"/>
+	<result column = "USER_NO" property="senderName"/>
+	<result column = "MESSAGE" property="message"/>
+	<result column ="CREATE_DATE" property="createDate"/>
+</resultMap>
+
+<insert id = "createChatRoom" parameterType="chatRoom" useGeneratedKeys = "true">
+	INSERT INTO CHAT
+	VALUES(
+		SEQ_CHATROOM_NO.NEXTVAL,#{userId},#{chatroomName},'Y'
+	)
+	<selectKey keyProperty="chatroomNo" resultType="int" order="AFTER">
+		SELECT SEQ_CHATROOM_NO.CURRVAL FROM DUAL
+	</selectKey>
+</insert>
+<insert id="joinChatRoom" parameterType="chatRoom">
+	INSERT INTO CHAT_JOIN
+	VALUES(
+		#{result},#{room.userId}
+	)
+</insert>
+<insert id ="joinRoom">
+	INSERT INTO CHAT_JOIN
+	VALUES(
+		#{chatroomNo},#{userId}
+	)
+</insert>
+<select id="checkRoom" resultType="int">
+	SELECT COUNT(*)
+	FROM CHAT
+	JOIN CHAT_JOIN USING(CHATROOM_NO)
+	WHERE CHAT.USER_NO = #{userId} AND CHAT_JOIN.USER_NO = #{memberId} AND CHATROOM_NAME IN (#{userId}, #{memberId})
+</select>
+<select id ="checkRoomOther" resultType = "int">
+	SELECT COUNT(*)
+	FROM CHAT
+	JOIN CHAT_JOIN USING(CHATROOM_NO)
+	WHERE CHAT.USER_NO = #{memberId} AND CHAT_JOIN.USER_NO = #{userId} AND CHATROOM_NAME IN (#{userId}, #{memberId})
+
+</select>
+<select id="checkedRoom" resultType="int">
+	SELECT CHATROOM_NO
+	FROM CHAT
+	JOIN CHAT_JOIN USING(CHATROOM_NO)
+	WHERE CHAT.USER_NO = #{userId} AND CHAT_JOIN.USER_NO = #{memberId} AND CHATROOM_NAME IN (#{userId}, #{memberId})
+	UNION
+	SELECT CHATROOM_NO
+	FROM CHAT
+	JOIN CHAT_JOIN USING(CHATROOM_NO)
+	WHERE CHAT.USER_NO = #{memberId} AND CHAT_JOIN.USER_NO = #{userId} AND CHATROOM_NAME IN (#{userId}, #{memberId})
+</select>
+<select id="checkjoinRoom" resultType="int">
+	SELECT COUNT(*)
+	FROM CHAT_JOIN
+	WHERE CHATROOM_NO = #{chatroomNo} AND USER_NO = #{userId}
+</select>
+<insert id="insertMsg" parameterType="chatMessage">
+	INSERT INTO CHAT_MSG
+	VALUES(
+		SEQ_MSG_NO.NEXTVAL,#{chatroomNo},#{senderName},#{message},#{createDate}
+	)
+</insert>
+<select id ="messageRepo" parameterType="int" resultMap="chatMessageResultSet">
+	SELECT *
+	FROM CHAT_MSG
+	WHERE CHATROOM_NO = #{chatroomNo}
+	ORDER BY CREATE_DATE ASC
+</select>
+<select id ="searchChat" parameterType="string" resultMap="chatRoomResultSet">
+	SELECT *
+	FROM CHAT c
+	LEFT JOIN (
+	SELECT
+	cm.CHATROOM_NO,
+	cm.MESSAGE,
+	cm.CREATE_DATE
+	FROM
+	CHAT_MSG cm
+	JOIN (
+	SELECT CHATROOM_NO, MAX(CREATE_DATE) AS MAX_DATE
+	FROM CHAT_MSG
+	GROUP BY CHATROOM_NO
+	) max_msg ON cm.CHATROOM_NO = max_msg.CHATROOM_NO AND cm.CREATE_DATE =
+	max_msg.MAX_DATE
+	) latest_msg ON c.CHATROOM_NO = latest_msg.CHATROOM_NO
+	WHERE c.CHATROOM_NO IN (SELECT CHATROOM_NO FROM CHAT_JOIN WHERE USER_NO =
+	#{userId} AND CHATROOM_NAME LIKE '%'|| #{search}|| '%')
+	ORDER BY latest_msg.CREATE_DATE DESC NULLS LAST
+</select>
+<select id="Chatlist" parameterType="String" resultMap="chatRoomResultSet">
+	SELECT *
+	FROM CHAT c
+	LEFT JOIN (
+	SELECT
+	cm.CHATROOM_NO,
+	cm.MESSAGE,
+	cm.CREATE_DATE
+	FROM
+	CHAT_MSG cm
+	JOIN (
+	SELECT CHATROOM_NO, MAX(CREATE_DATE) AS MAX_DATE
+	FROM CHAT_MSG
+	GROUP BY CHATROOM_NO
+	) max_msg ON cm.CHATROOM_NO = max_msg.CHATROOM_NO AND cm.CREATE_DATE =
+	max_msg.MAX_DATE
+	) latest_msg ON c.CHATROOM_NO = latest_msg.CHATROOM_NO
+	WHERE c.CHATROOM_NO IN (SELECT CHATROOM_NO FROM CHAT_JOIN WHERE USER_NO =
+	#{userId})
+	ORDER BY latest_msg.CREATE_DATE DESC NULLS LAST
+
+</select>
+
+<insert id = "createGroupChatRoom" parameterType="chatRoom" useGeneratedKeys = "true">
+	INSERT INTO CHAT
+	VALUES(
+		SEQ_CHATROOM_NO.NEXTVAL,#{userId},#{chatroomName},'Y'
+	)
+	<selectKey keyProperty="chatroomNo" resultType="int" order="AFTER">
+		SELECT SEQ_CHATROOM_NO.CURRVAL FROM DUAL
+	</selectKey>
+</insert>
+<insert id ="joinGroupMember">
+	INSERT INTO CHAT_JOIN
+	VALUES(
+		#{chatroomNo},#{memberId}
+	)
+</insert>
+<delete id="exitChatroom">
+	DELETE FROM CHAT_JOIN
+	WHERE CHATROOM_NO = #{chatroomNo} AND USER_NO = #{userId}
+</delete>
+</mapper>
